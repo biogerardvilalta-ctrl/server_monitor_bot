@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  telegram-monitor:
+    build: .
+    container_name: server-monitor-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Mapejar l'arrel / de l'host a /host per poder monitoritzar el disc real (Fase 1 extra)
+    # vols de docker per a fase 2 etc.. els afegirem quan toqui
+    volumes:
+      - /:/host:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro

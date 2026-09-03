@@ -1,0 +1,17 @@
+# Entorns virtuals
+venv/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema operatiu
+.DS_Store
+Thumbs.db

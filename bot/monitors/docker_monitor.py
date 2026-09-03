@@ -3,22 +3,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def get_docker_client():
-    try:
-        return docker.from_env()
-    except Exception as e:
-        logger.error(f"Error connectant a Docker: {e}")
-        return None
-
 def list_containers():
-    client = get_docker_client()
-    if not client:
-        return "❌ Error: No s'ha pogut connectar a Docker (està socket muntat?)"
-    
     try:
+        client = docker.from_env()
         containers = client.containers.list(all=True)
         if not containers:
-            return "No hi ha cap contenidor Docker."
+            return "No hi ha cap contenidor Docker actiu o registrat."
         
         msg = "📦 *Contenidors Docker:*\n\n"
         for c in containers:
@@ -27,35 +17,29 @@ def list_containers():
             
         return msg
     except Exception as e:
-        logger.error(f"Error llistant contenidors: {e}")
-        return "⚠️ Error llegint l'estat dels contenidors."
+        logger.error(f"Error connectant o llistant Docker: {e}")
+        return f"❌ Error connectant a Docker:\n`{str(e)}`"
 
 def restart_container(container_name):
-    client = get_docker_client()
-    if not client:
-        return False, "Error de connexió a Docker"
-        
     try:
+        client = docker.from_env()
         container = client.containers.get(container_name)
         container.restart()
         return True, f"✅ Contenidor `{container_name}` reiniciat correctament."
     except docker.errors.NotFound:
         return False, f"❌ No s'ha trobat el contenidor `{container_name}`."
     except Exception as e:
-        return False, f"⚠️ Error reiniciant: {str(e)}"
+        return False, f"⚠️ Error reiniciant `{container_name}`:\n`{str(e)}`"
 
 def get_container_logs(container_name, tail=30):
-    client = get_docker_client()
-    if not client:
-        return False, "Error de connexió a Docker"
-        
     try:
+        client = docker.from_env()
         container = client.containers.get(container_name)
-        logs = container.logs(tail=tail).decode('utf-8')
+        logs = container.logs(tail=tail).decode('utf-8', errors='replace')
         if not logs:
             logs = "(No hi ha logs recents)"
         return True, logs
     except docker.errors.NotFound:
         return False, f"❌ No s'ha trobat el contenidor `{container_name}`."
     except Exception as e:
-        return False, f"⚠️ Error llegint logs: {str(e)}"
+        return False, f"⚠️ Error llegint logs de `{container_name}`:\n`{str(e)}`"

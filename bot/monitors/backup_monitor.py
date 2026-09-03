@@ -19,20 +19,24 @@ def check_backups():
     tot_correcte = True
 
     try:
-        arxius = os.listdir(BACKUP_DIR)
+        rutes_absolutes = []
+        # Cerca recursiva (entrarà a carpetes com /trading_bot/)
+        for root, dirs, files in os.walk(BACKUP_DIR):
+            for file in files:
+                if file.endswith(".gz") or file.endswith(".db"):
+                    rutes_absolutes.append(os.path.join(root, file))
         
         for projecte in projectes:
-            # Buscar fitxers que comencin pel nom del projecte
-            fitxers_projecte = [f for f in arxius if f.startswith(projecte) and f.endswith(".gz") or f.endswith(".db")]
+            # Buscar fitxers que tinguin el nom del projecte a l'arxiu
+            fitxers_projecte = [f for f in rutes_absolutes if projecte in os.path.basename(f).lower()]
             
             if not fitxers_projecte:
                 resultats.append(f"🔴 `{projecte}`: No s'ha trobat cap backup!")
                 tot_correcte = False
                 continue
             
-            # Agafar el fitxer modificat més recentment (o crear-ne la ruta absoluta per mirar-ne el temps)
-            rutes_absolutes = [os.path.join(BACKUP_DIR, f) for f in fitxers_projecte]
-            arxiu_mes_recent = max(rutes_absolutes, key=os.path.getmtime)
+            # Agafar el fitxer modificat més recentment
+            arxiu_mes_recent = max(fitxers_projecte, key=os.path.getmtime)
             nom_arxiu = os.path.basename(arxiu_mes_recent)
             
             # Temps des de la modificació

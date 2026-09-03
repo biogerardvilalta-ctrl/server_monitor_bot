@@ -1,7 +1,7 @@
 import logging
 from bot.config import ALERT_CPU_THRESHOLD, ALERT_RAM_THRESHOLD, ALERT_DISK_THRESHOLD, SERVER_NAME, ALLOWED_CHAT_ID
 from bot.monitors.system import get_system_stats
-from bot.monitors.docker_monitor import get_client
+from bot.monitors.docker_monitor import get_client, restart_container
 
 logger = logging.getLogger(__name__)
 
@@ -75,33 +75,40 @@ async def check_alerts_job(context):
                     parse_mode='Markdown'
                 )
 
-        # 4. Alerta de Contenidors Caiguts
+        # 4. Auto-Reparació i Alertas de Contenidors Caiguts
         try:
             client = get_client()
             containers = client.containers.list(all=True)
             current_failed = set()
             
             for c in containers:
+                # No monitoritzar el propi bot de monitoratge si està aturat manualment
+                if c.name == "server-monitor-bot":
+                    continue
+                    
                 if c.status not in ['running', 'restarting']:
                     current_failed.add(c.name)
 
-            # Contenidors que han caigut nous
+            # Contenidors que han caigut nous -> Intentar AUTO-REPARACIÓ
             new_failed = current_failed - previous_state["failed_containers"]
             for name in new_failed:
-                await context.bot.send_message(
-                    chat_id=ALLOWED_CHAT_ID,
-                    text=f"🔴 *CONTENIDOR CAIGUT*\n\nEl servei/contenidor `{name}` s'ha aturat al servidor *{SERVER_NAME}*!\n\nPots reiniciar-lo amb `/restart {name}` o veure els logs amb `/logs {name}`.",
-                    parse_mode='Markdown'
-                )
-
-            # Contenidors que s'han recuperat
-            recovered = previous_state["failed_containers"] - current_failed
-            for name in recovered:
-                await context.bot.send_message(
-                    chat_id=ALLOWED_CHAT_ID,
-                    text=f"🟢 *CONTENIDOR RECUPERAT*\n\nEl servei/contenidor `{name}` torna a estar actiu.",
-                    parse_mode='Markdown'
-                )
+                logger.warning(f"Contenidor {name} caigut. Intentant auto-reinici...")
+                
+                # Intentar reiniciar el contenidor automàticament
+                success, restart_msg = restart_container(name)
+                
+                if success:
+                    await context.bot.send_message(
+                        chat_id=ALLOWED_CHAT_ID,
+                        text=f"⚡ *AUTO-REPARACIÓ EXECUTADA*\n\nEl servei `{name}` havia caigut al servidor *{SERVER_NAME}*.\n\n🔄 *Acció*: El bot l'ha reiniciat automàticament i torna a estar actiu (🟢 running).",
+                        parse_mode='Markdown'
+                    )
+                else:
+                    await context.bot.send_message(
+                        chat_id=ALLOWED_CHAT_ID,
+                        text=f"🚨 *CONTENIDOR CAIGUT (AUTO-REPARACIÓ FALLIDA)*\n\nEl servei `{name}` ha caigut al servidor *{SERVER_NAME}*.\n\n❌ L'intent de reiniciar-lo automàticament ha fallat:\n`{restart_msg}`\n\nComprova els logs amb `/logs {name}`.",
+                        parse_mode='Markdown'
+                    )
 
             previous_state["failed_containers"] = current_failed
 

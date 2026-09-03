@@ -1,10 +1,13 @@
 import logging
+import datetime
+import pytz
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, filters, MessageHandler
 from bot.config import TELEGRAM_BOT_TOKEN, ALLOWED_CHAT_ID, SERVER_NAME, check_config
 from bot.monitors.system import get_system_stats, format_status_message
 from bot.monitors.docker_monitor import list_containers, restart_container, get_container_logs
 from bot.hetzner.client import reboot_server, reset_server, poweroff_server, poweron_server
+from bot.monitors.alert_engine import check_alerts_job, send_daily_report_job
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -51,7 +54,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/reboot - Soft reboot (reinici normal)\n"
         "/hardreset - Hard reset (botó d'emergència)\n"
         "/poweroff - Apagar servidor\n"
-        "/poweron - Encendre servidor"
+        "/poweron - Encendre servidor\n\n"
+        "🔔 *Alertes automàtiques activades*\n"
+        "• Avís si CPU > 85%, RAM > 90% o Disc > 85%\n"
+        "• Avís si un contenidor cau o s'atura\n"
+        "• Report diari automàtic a les 09:00h"
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
@@ -145,6 +152,18 @@ def main():
         
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, ignore_unauthorized))
     
+    # --- Programació d'alertes automàtiques i report diari ---
+    job_queue = app.job_queue
+    if job_queue:
+        # Comprovar alertes cada 60 segons
+        job_queue.run_repeating(check_alerts_job, interval=60, first=10)
+        
+        # Enviar report diari cada dia a les 09:00h del matí (Hora Madrid/Barcelona)
+        madrid_tz = pytz.timezone('Europe/Madrid')
+        report_time = datetime.time(hour=9, minute=0, tzinfo=madrid_tz)
+        job_queue.run_daily(send_daily_report_job, time=report_time)
+        logger.info("Scheduler d'alertes i report diari inicialitzat correctament.")
+
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':

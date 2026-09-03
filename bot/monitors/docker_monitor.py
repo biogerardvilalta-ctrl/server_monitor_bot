@@ -3,9 +3,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def get_client():
+    # Usar unix socket directament per evitar incompatibilitats http+docker d'urllib3
+    return docker.DockerClient(base_url='unix://var/run/docker.sock')
+
 def list_containers():
     try:
-        client = docker.from_env()
+        client = get_client()
         containers = client.containers.list(all=True)
         if not containers:
             return "No hi ha cap contenidor Docker actiu o registrat."
@@ -22,7 +26,7 @@ def list_containers():
 
 def restart_container(container_name):
     try:
-        client = docker.from_env()
+        client = get_client()
         container = client.containers.get(container_name)
         container.restart()
         return True, f"✅ Contenidor `{container_name}` reiniciat correctament."
@@ -33,7 +37,7 @@ def restart_container(container_name):
 
 def get_container_logs(container_name, tail=30):
     try:
-        client = docker.from_env()
+        client = get_client()
         container = client.containers.get(container_name)
         logs = container.logs(tail=tail).decode('utf-8', errors='replace')
         if not logs:

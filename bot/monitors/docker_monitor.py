@@ -4,8 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def get_client():
-    # Usar unix socket directament per evitar incompatibilitats http+docker d'urllib3
-    return docker.DockerClient(base_url='unix://var/run/docker.sock')
+    return docker.from_env()
 
 def list_containers():
     try:

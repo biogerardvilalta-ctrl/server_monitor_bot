@@ -11,4 +11,4 @@ services:
     # vols de docker per a fase 2 etc.. els afegirem quan toqui
     volumes:
       - /:/host:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock

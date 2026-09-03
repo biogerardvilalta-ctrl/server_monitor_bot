@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, filters, Mes
 from bot.config import TELEGRAM_BOT_TOKEN, ALLOWED_CHAT_ID, SERVER_NAME, check_config
 from bot.monitors.system import get_system_stats, format_status_message
 from bot.monitors.docker_monitor import list_containers, restart_container, get_container_logs
+from bot.monitors.backup_monitor import check_backups
 from bot.hetzner.client import reboot_server, reset_server, poweroff_server, poweron_server
 from bot.monitors.alert_engine import check_alerts_job, send_daily_report_job
 
@@ -106,6 +107,11 @@ async def cmd_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(msg, parse_mode='Markdown')
 
+async def cmd_backups(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await auth_check(update, context): return
+    success, msg = check_backups()
+    await update.message.reply_text(msg, parse_mode='Markdown')
+
 # --- Handlers de Hetzner ---
 async def cmd_reboot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await auth_check(update, context): return
@@ -141,6 +147,7 @@ def main():
     app.add_handler(CommandHandler("containers", cmd_containers))
     app.add_handler(CommandHandler("restart", cmd_restart))
     app.add_handler(CommandHandler("logs", cmd_logs))
+    app.add_handler(CommandHandler("backups", cmd_backups))
     
     app.add_handler(CommandHandler("reboot", cmd_reboot))
     app.add_handler(CommandHandler("hardreset", cmd_hardreset))

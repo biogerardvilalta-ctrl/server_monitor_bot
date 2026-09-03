@@ -3,6 +3,8 @@ from bot.config import ALERT_CPU_THRESHOLD, ALERT_RAM_THRESHOLD, ALERT_DISK_THRE
 from bot.monitors.system import get_system_stats
 from bot.monitors.docker_monitor import get_client, restart_container
 
+from bot.monitors.backup_monitor import check_backups
+
 logger = logging.getLogger(__name__)
 
 # Estat previ per no enviar alertes repetides cada minut
@@ -139,6 +141,14 @@ async def send_daily_report_job(context):
                 msg += f"  {status_icon} `{c.name}` ({c.status})\n"
         except Exception:
             msg += "📦 Error llegint l'estat dels contenidors.\n"
+
+        msg += "\n"
+        
+        try:
+            success, backup_msg = check_backups()
+            msg += f"{backup_msg}\n"
+        except Exception:
+            msg += "💾 Error llegint l'estat dels backups.\n"
 
         msg += "\n✅ Tot funcionant correctament!"
         

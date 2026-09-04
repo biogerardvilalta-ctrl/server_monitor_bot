@@ -56,6 +56,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/hardreset - Hard reset (botó d'emergència)\n"
         "/poweroff - Apagar servidor\n"
         "/poweron - Encendre servidor\n\n"
+        "💾 *Seguretat*\n"
+        "/backups - Estat de les últimes còpies de seguretat\n\n"
         "🔔 *Alertes automàtiques activades*\n"
         "• Avís si CPU > 85%, RAM > 90% o Disc > 85%\n"
         "• Avís si un contenidor cau o s'atura\n"
